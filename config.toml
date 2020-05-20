@@ -1,0 +1,10 @@
+baseURL = "http://lewisay.com/"
+languageCode = "en-us"
+title = "lewisay's log"
+theme = "anatole"
+
+[params]
+author = "lewisay"
+description = "心游于艺，道不远人"
+profilePicture = "images/profile.jpeg"
+customCss = ["css/index.css"]
