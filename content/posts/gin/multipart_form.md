@@ -1,12 +1,13 @@
 ---
-title: "Gin multipart form binding"
+title: "Gin框架文件上传异常"
 date: 2020-05-20T22:36:24+08:00
 draft: false
 ---
 
-> 问题描述
+#### 问题描述
 
-Gin 文件上传时, 若不指定需要上传的文件会遇到 ```unexpected end of JSON input``` 错误, 核心代码如下
+Gin 文件上传时, 指定文件内容为空会遇到 ```unexpected end of JSON input``` 错误, 核心代码如下
+<!--more-->
 
 ```go
 type BindFile struct {
@@ -22,7 +23,7 @@ if err := c.Bind(&bindFile); err != nil {
 }
 ```
 
-> 产生原因
+#### 产生原因
 
 ```go
 func (r *multipartRequest) TrySet(value reflect.Value, field reflect.StructField, key string, opt setOptions) (isSetted bool, err error) {
@@ -56,7 +57,7 @@ func setByForm(value reflect.Value, field reflect.StructField, form map[string][
 		}
 		return true, setArray(vs, value, field)
     default:
-        // 实际执行 default 分支
+        // file 为 reflect.Struct 执行 default 分支
 		var val string
 		if !ok {
 			val = opt.defaultValue
@@ -90,5 +91,49 @@ func setWithProperType(val string, value reflect.Value, field reflect.StructFiel
 }
 ```
 
-> 解决方案
+#### 解决方案
+
 若需要文件为可选，上传时不应传递指定字段
+
+#### 意外收获
+
+```go
+func tryToSetValue(value reflect.Value, field reflect.StructField, setter setter, tag string) (bool, error) {
+	var tagValue string
+	var setOpt setOptions
+
+	// tag == form
+	tagValue = field.Tag.Get(tag)
+	tagValue, opts := head(tagValue, ",")
+
+	if tagValue == "" { // default value is FieldName
+		tagValue = field.Name
+	}
+	if tagValue == "" { // when field is "emptyField" variable
+		return false, nil
+	}
+
+	var opt string
+	for len(opts) > 0 {
+		// opts = default=xxxx
+		opt, opts = head(opts, ",")
+
+		// 获取 default 对应的值
+		if k, v := head(opt, "="); k == "default" {
+			setOpt.isDefaultExists = true
+			setOpt.defaultValue = v
+		}
+	}
+
+	return setter.TrySet(value, field, tagValue, setOpt)
+}
+```
+这里判断 field tag 中是否存在 default 标记，意味着可以给字段增加默认值，使用方式如下
+
+```go
+type BindFile struct {
+    Name       string                   `form:"name,default=lewisay" binding:"required"`
+    Email string                        `form:"email,default=lewisay@163.com" binding:"required"`
+    File       *multipart.FileHeader    `form:"file,default={\"Size\":0}"`
+}
+```

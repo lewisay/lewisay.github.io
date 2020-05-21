@@ -1,6 +1,6 @@
-baseURL = "http://lewisay.com/"
+baseURL = "https://lewisay.com/"
 languageCode = "en-us"
-title = "lewisay's log"
+title = "^_^"
 theme = "anatole"
 
 [params]
